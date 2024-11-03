@@ -1,0 +1,105 @@
+      ******************************************************************
+      * PROGRAM: FILE-PROCESS-EXAMPLE
+      * AUTHOR: [Your Name]
+      * DATE:   [Today's Date]
+      * PURPOSE: Sample COBOL file processing program
+      ******************************************************************
+
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. FILE-PROCESS-EXAMPLE.
+
+       ENVIRONMENT DIVISION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT IN-FILE ASSIGN TO 'inputfile.txt'
+               ORGANIZATION IS LINE SEQUENTIAL.
+           SELECT OUT-FILE ASSIGN TO 'outputfile.txt'
+               ORGANIZATION IS LINE SEQUENTIAL.
+
+       DATA DIVISION.
+       FILE SECTION.
+       FD  IN-FILE.
+       01  IN-RECORD PIC X(80).
+
+       FD  OUT-FILE.
+       01  OUT-RECORD PIC X(80).
+
+       WORKING-STORAGE SECTION.
+       01  WS-COUNTERS.
+           05 WS-RECORD-COUNT     PIC 9(6) VALUE 0.
+           05 WS-ERROR-COUNT       PIC 9(6) VALUE 0.
+           05 WS-TOTAL-AMOUNT      PIC 9(9)V99 VALUE 0.
+           05 WS-EOF-FLAG          PIC X VALUE 'N'.
+
+       01  WS-WORK-FIELDS.
+           05 WS-INPUT-AMOUNT      PIC 9(7)V99.
+           05 WS-OUTPUT-AMOUNT     PIC 9(7)V99.
+
+       01  WS-MESSAGES.
+           05 WS-EOF-MESSAGE       PIC X(30) VALUE "End of file reached.".
+           05 WS-ERROR-MESSAGE     PIC X(50) VALUE "Error: Invalid data found in record.".
+
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           PERFORM INITIALIZE-PARA
+           PERFORM PROCESS-FILE-PARA
+           PERFORM CLOSE-FILES
+           STOP RUN.
+
+       INITIALIZE-PARA.
+           OPEN INPUT IN-FILE
+           OPEN OUTPUT OUT-FILE.
+
+       PROCESS-FILE-PARA.
+           READ IN-FILE INTO IN-RECORD
+               AT END
+                   MOVE 'Y' TO WS-EOF-FLAG
+           END-READ
+           
+           PERFORM UNTIL WS-EOF-FLAG = 'Y'
+               ADD 1 TO WS-RECORD-COUNT
+               PERFORM PROCESS-RECORD-PARA
+               READ IN-FILE INTO IN-RECORD
+                   AT END
+                       MOVE 'Y' TO WS-EOF-FLAG
+               END-READ
+           END-PERFORM.
+
+       PROCESS-RECORD-PARA.
+           IF IN-RECORD(1:1) = 'H'
+               PERFORM PROCESS-HEADER-PARA
+           ELSE IF IN-RECORD(1:1) = 'D'
+               PERFORM PROCESS-DATA-PARA
+           ELSE IF IN-RECORD(1:1) = 'T'
+               PERFORM PROCESS-TRAILER-PARA
+           ELSE
+               PERFORM HANDLE-ERROR
+           END-IF.
+
+       PROCESS-HEADER-PARA.
+           DISPLAY "Processing Header Record".
+
+       PROCESS-DATA-PARA.
+           MOVE IN-RECORD(10:7) TO WS-INPUT-AMOUNT
+           IF WS-INPUT-AMOUNT NUMERIC
+               ADD WS-INPUT-AMOUNT TO WS-TOTAL-AMOUNT
+               MOVE IN-RECORD TO OUT-RECORD
+               WRITE OUT-RECORD
+           ELSE
+               PERFORM HANDLE-ERROR
+           END-IF.
+
+       PROCESS-TRAILER-PARA.
+           DISPLAY "Processing Trailer Record".
+
+       HANDLE-ERROR.
+           ADD 1 TO WS-ERROR-COUNT
+           DISPLAY WS-ERROR-MESSAGE.
+
+       CLOSE-FILES.
+           CLOSE IN-FILE
+           CLOSE OUT-FILE
+           DISPLAY "Total records processed: ", WS-RECORD-COUNT
+           DISPLAY "Total errors: ", WS-ERROR-COUNT
+           DISPLAY "Total amount: ", WS-TOTAL-AMOUNT
+           DISPLAY WS-EOF-MESSAGE.
